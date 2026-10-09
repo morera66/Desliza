@@ -6,10 +6,35 @@ import Foundation
 final class PhotoLibrary: ObservableObject {
     @Published private(set) var status: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
 
+    /// Texto de diagnóstico que se muestra en la pantalla de permisos.
+    @Published private(set) var lastMessage: String?
+
     var hasAccess: Bool { status == .authorized || status == .limited }
 
-    func requestAccess() async {
-        status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+    /// Versión con callback en vez de async, y dejando rastro en pantalla de cada paso.
+    func requestAccess() {
+        lastMessage = "Pidiendo acceso… (estado antes: \(Self.describe(status)))"
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { @Sendable [weak self] newStatus in
+            Task { @MainActor in
+                self?.applyResponse(newStatus)
+            }
+        }
+    }
+
+    private func applyResponse(_ newStatus: PHAuthorizationStatus) {
+        status = newStatus
+        lastMessage = "Respuesta de iOS: \(Self.describe(newStatus))"
+    }
+
+    static func describe(_ status: PHAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "sin decidir"
+        case .restricted: return "restringido"
+        case .denied: return "denegado"
+        case .authorized: return "acceso total"
+        case .limited: return "acceso limitado"
+        @unknown default: return "desconocido (\(status.rawValue))"
+        }
     }
 
     func refreshStatus() {

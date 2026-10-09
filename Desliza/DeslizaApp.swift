@@ -65,9 +65,17 @@ struct AccessView: View {
                 .buttonStyle(.borderedProminent)
             } else {
                 Button("Dar acceso a Fotos") {
-                    Task { await library.requestAccess() }
+                    library.requestAccess()
                 }
                 .buttonStyle(.borderedProminent)
+            }
+
+            // Diagnóstico: qué ha respondido iOS al pedir el permiso
+            if let message = library.lastMessage {
+                Text(message)
+                    .font(.footnote.monospaced())
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(32)
